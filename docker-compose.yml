@@ -1,0 +1,51 @@
+---
+version: '3.5'
+x-ruby: &ruby
+  image: ruby:2.6
+  tty: true
+  stdin_open: true
+  working_dir: "/workspace"
+  volumes:
+  - .:/workspace
+  - bot-bundle-box:/usr/local/bundle
+  depends_on:
+  - ngrok
+  - redis
+
+services:
+  bot:
+    <<: *ruby
+    ports:
+    - 5000
+    depends_on:
+    - ngrok
+    - redis
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      VERIFY_TOKEN: ""
+      PAGE_ACCESS_TOKEN: ""
+    command:
+    - "/bin/sh"
+    - "-c"
+    - |
+      set -ex
+      bundle check || bundle install
+      bundle exec stealth s
+
+  redis:
+    image: redis:latest
+    ports:
+    - 6379
+
+  ngrok:
+    image: wernight/ngrok
+    ports:
+      - 4040:4040
+    environment:
+      NGROK_PORT: bot:5000
+      NGROK_AUTH: ""
+    env_file: .env
+
+volumes:
+  bot-bundle-box:
+    driver: local
